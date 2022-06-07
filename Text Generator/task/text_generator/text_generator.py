@@ -1,4 +1,5 @@
 import nltk
+import random
 from nltk.tokenize import regexp_tokenize
 from collections import Counter
 
@@ -35,7 +36,7 @@ class TextGenerator:
             try:
                 idx = int(user_input)
                 bigram = self.bigrams[idx]
-                print(f'Head: {bigram[0]} Tail: {bigram[1]}')
+                print(f'Head: {bigram[0].ljust(10)} Tail: {bigram[1]}')
             except IndexError:
                 print('Index Error. Please input an integer that is in the range of the corpus.')
             except ValueError:
@@ -60,8 +61,22 @@ class TextGenerator:
                     print(f'Tail: {tail.ljust(10)} Count: {count}')
             user_input = input()
 
+    def get_tail(self, head):
+        population, weights = list(zip(*self.model[head].most_common()))
+        return random.choices(population, weights)[0]
+
+    def generate_pseudo_sentence(self):
+        sentence = []
+        while len(sentence) < 10:
+            try:
+                sentence.append(self.get_tail(sentence[-1]))
+            except IndexError:
+                sentence.append(random.choice(list(set(self.tokens))))
+        return ' '.join(sentence)
+
 
 if __name__ == "__main__":
     text_generator = TextGenerator(input())
     text_generator.get_model()
-    text_generator.print_model()
+    for n in range(10):
+        print(text_generator.generate_pseudo_sentence())
