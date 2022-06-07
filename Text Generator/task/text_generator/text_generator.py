@@ -11,6 +11,7 @@ class TextGenerator:
         self.tokens = regexp_tokenize(self.corpus, r'\S+')
         self.unique_tokens = list(set(self.tokens))
         self.bigrams = list(nltk.bigrams(self.tokens))
+        self.trigrams = list(nltk.trigrams(self.tokens))
         self.model = {}
 
     def show_info(self):
@@ -46,8 +47,8 @@ class TextGenerator:
                 user_input = input()
 
     def get_model(self):
-        for head, tail in self.bigrams:
-            self.model.setdefault(head, []).append(tail)
+        for head, body, tail in self.trigrams:
+            self.model.setdefault(f'{head} {body}', []).append(tail)
         for head, tails in self.model.items():
             self.model[head] = Counter(tails)
 
@@ -63,10 +64,11 @@ class TextGenerator:
             user_input = input()
 
     def get_head(self):
-        head = random.choice(self.unique_tokens)
-        while not head[0].isupper() or head[-1] in '.!?':
-            head = random.choice(self.unique_tokens)
-        return head
+        options = [pair for pair in self.model.keys() if pair[0].isupper()]
+        starter = random.choice(options)
+        while starter.split()[0][-1] in '.!?':
+            starter = random.choice(options)
+        return starter
 
     def get_tail(self, head, ending):
         population, weights = list(zip(*self.model[head].most_common()))
@@ -81,18 +83,15 @@ class TextGenerator:
         return ending_words == []
 
     def generate_pseudo_sentence(self):
-        sentence = []
+        sentence = self.get_head().split()
         while len(sentence) < 10:
-            if len(sentence) == 9 and self.is_dead_end(sentence[-1]):
-                sentence = []
+            if len(sentence) == 9 and self.is_dead_end(' '.join(sentence[-2:])):
+                sentence = self.get_head().split()
                 continue
-            try:
-                word = self.get_tail(sentence[-1], len(sentence) == 9)
-                sentence.append(word)
-                if len(sentence) > 4 and word[-1] in '.?!':
-                    break
-            except IndexError:
-                sentence.append(self.get_head())
+            word = self.get_tail(' '.join(sentence[-2:]), len(sentence) == 9)
+            sentence.append(word)
+            if len(sentence) > 4 and word[-1] in '.?!':
+                break
         return ' '.join(sentence)
 
 
