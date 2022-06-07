@@ -9,13 +9,14 @@ class TextGenerator:
         with open(file_path, 'r', encoding='utf-8') as f:
             self.corpus = f.read()
         self.tokens = regexp_tokenize(self.corpus, r'\S+')
+        self.unique_tokens = list(set(self.tokens))
         self.bigrams = list(nltk.bigrams(self.tokens))
         self.model = {}
 
     def show_info(self):
         print(f'Corpus statistics\n'
               f'All tokens: {len(self.tokens)}\n'
-              f'Unique tokens: {len(set(self.tokens))}\n')
+              f'Unique tokens: {len(self.unique_tokens)}\n')
 
     def print_tokens(self):
         user_input = input()
@@ -61,17 +62,37 @@ class TextGenerator:
                     print(f'Tail: {tail.ljust(10)} Count: {count}')
             user_input = input()
 
-    def get_tail(self, head):
+    def get_head(self):
+        head = random.choice(self.unique_tokens)
+        while not head[0].isupper() or head[-1] in '.!?':
+            head = random.choice(self.unique_tokens)
+        return head
+
+    def get_tail(self, head, ending):
         population, weights = list(zip(*self.model[head].most_common()))
-        return random.choices(population, weights)[0]
+        tail = random.choices(population, weights)[0]
+        while ending and tail[-1] not in '.?!':
+            tail = random.choices(population, weights)[0]
+        return tail
+
+    def is_dead_end(self, word):
+        population = set(self.model[word].keys())
+        ending_words = [w for w in population if w[-1] in '.?!']
+        return ending_words == []
 
     def generate_pseudo_sentence(self):
         sentence = []
         while len(sentence) < 10:
+            if len(sentence) == 9 and self.is_dead_end(sentence[-1]):
+                sentence = []
+                continue
             try:
-                sentence.append(self.get_tail(sentence[-1]))
+                word = self.get_tail(sentence[-1], len(sentence) == 9)
+                sentence.append(word)
+                if len(sentence) > 4 and word[-1] in '.?!':
+                    break
             except IndexError:
-                sentence.append(random.choice(list(set(self.tokens))))
+                sentence.append(self.get_head())
         return ' '.join(sentence)
 
 
